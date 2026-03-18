@@ -1,4 +1,5 @@
 import { spawn, ChildProcess } from 'child_process';
+import fs from 'fs';
 import path from 'path';
 import { LogService } from './logService.js';
 import { config } from './config.js';
@@ -6,6 +7,7 @@ import type { StartProcessInput, ProcessInfo } from './types.js';
 
 export class ProcessManager {
   private processes: Map<string, ProcessInfo> = new Map();
+  private logFiles: Map<string, string> = new Map();
   private logService: LogService;
 
   constructor(logsDir: string = config.logsDir) {
@@ -21,7 +23,7 @@ export class ProcessManager {
       throw new Error(`Process '${input.id}' is already running`);
     }
 
-    const logFile = path.join(config.logsDir, `${input.id}.log`);
+    const logFile = path.join(this.logService.logsDir, `${input.id}.log`);
 
     const childProcess = spawn(input.command, [], {
       shell: true,
@@ -44,6 +46,9 @@ export class ProcessManager {
       logFile,
       status: 'running',
     });
+
+    // Store log file path for retrieval after process exits
+    this.logFiles.set(input.id, logFile);
 
     // Auto-cleanup when process exits naturally
     childProcess.on('exit', () => {
@@ -81,5 +86,40 @@ export class ProcessManager {
         }
       }, config.killTimeout);
     });
+  }
+
+  async getLogs(input: { id: string; lines?: number }): Promise<{ id: string; logs: string }> {
+    const logFile = this.logFiles.get(input.id);
+
+    if (!logFile) {
+      throw new Error(`Process '${input.id}' not found`);
+    }
+
+    if (!fs.existsSync(logFile)) {
+      throw new Error(`No logs found for process '${input.id}'`);
+    }
+
+    const logs = await this.logService.readLog(logFile, input.lines);
+    return { id: input.id, logs };
+  }
+
+  async searchLogs(input: { id: string; keyword: string; regex?: boolean }): Promise<{ id: string; matches: string[] }> {
+    const logFile = this.logFiles.get(input.id);
+
+    if (!logFile) {
+      throw new Error(`Process '${input.id}' not found`);
+    }
+
+    if (!fs.existsSync(logFile)) {
+      throw new Error(`No logs found for process '${input.id}'`);
+    }
+
+    const matches = await this.logService.searchLog(
+      logFile,
+      input.keyword,
+      input.regex
+    );
+
+    return { id: input.id, matches };
   }
 }

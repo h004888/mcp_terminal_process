@@ -3,7 +3,7 @@ import path from 'path';
 
 export class LogService {
   constructor(
-    private logsDir: string,
+    public logsDir: string,
     private maxFileSize: number,
     private maxRotatedFiles: number
   ) {

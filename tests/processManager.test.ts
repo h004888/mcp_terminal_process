@@ -91,4 +91,100 @@ describe('ProcessManager', () => {
     // Process should be auto-cleaned
     expect(processManager.getProcess('quick')).toBeUndefined();
   });
+
+  test('getLogs returns logs from process log file', async () => {
+    const processManager = new ProcessManager(testLogsDir);
+
+    await processManager.startProcess({
+      id: 'echo-test',
+      command: 'echo "Hello World"',
+    });
+
+    // Wait for process to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const result = await processManager.getLogs({ id: 'echo-test' });
+
+    expect(result.id).toBe('echo-test');
+    expect(result.logs).toContain('Hello World');
+  });
+
+  test('searchLogs returns matching lines', async () => {
+    const processManager = new ProcessManager(testLogsDir);
+
+    await processManager.startProcess({
+      id: 'echo-test',
+      command: 'echo "Hello World" && echo "Error occurred" && echo "World"',
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const result = await processManager.searchLogs({
+      id: 'echo-test',
+      keyword: 'Error',
+    });
+
+    expect(result.matches.some(m => m.includes('Error'))).toBe(true);
+  });
+
+  test('getLogs throws error for non-existent process', async () => {
+    const processManager = new ProcessManager(testLogsDir);
+
+    await expect(
+      processManager.getLogs({ id: 'nonexistent' })
+    ).rejects.toThrow("Process 'nonexistent' not found");
+  });
+
+  test('getLogs returns logs after process exits', async () => {
+    const processManager = new ProcessManager(testLogsDir);
+
+    await processManager.startProcess({
+      id: 'quick',
+      command: 'echo quick',
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const result = await processManager.getLogs({ id: 'quick' });
+    expect(result.id).toBe('quick');
+    expect(result.logs).toContain('quick');
+  });
+
+  test('searchLogs throws error for non-existent process', async () => {
+    const processManager = new ProcessManager(testLogsDir);
+
+    await expect(
+      processManager.searchLogs({ id: 'nonexistent', keyword: 'test' })
+    ).rejects.toThrow("Process 'nonexistent' not found");
+  });
+
+  test('searchLogs returns matches after process exits', async () => {
+    const processManager = new ProcessManager(testLogsDir);
+
+    await processManager.startProcess({
+      id: 'quick',
+      command: 'echo quick && echo test',
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const result = await processManager.searchLogs({ id: 'quick', keyword: 'test' });
+    expect(result.id).toBe('quick');
+    expect(result.matches.some(m => m.includes('test'))).toBe(true);
+  });
+
+  test('searchLogs throws error for invalid regex', async () => {
+    const processManager = new ProcessManager(testLogsDir);
+
+    await processManager.startProcess({
+      id: 'echo-test',
+      command: 'echo "Hello World"',
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    await expect(
+      processManager.searchLogs({ id: 'echo-test', keyword: '[unclosed', regex: true })
+    ).rejects.toThrow('Invalid regex');
+  });
 });
