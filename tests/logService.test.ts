@@ -41,4 +41,22 @@ describe('LogService', () => {
 
     expect(fs.readFileSync(logFile, 'utf-8')).toBe('Line 1\nLine 2\n');
   });
+
+  test('rotateLog renames existing file and creates new one', async () => {
+    const logService = new LogService(testLogsDir, 100, 3); // 100 bytes max
+    const logFile = path.join(testLogsDir, 'test.log');
+
+    // Create initial file
+    await logService.appendLog(logFile, 'A'.repeat(50) + '\n');
+    expect(fs.existsSync(logFile)).toBe(true);
+    expect(fs.existsSync(logFile + '.1')).toBe(false);
+
+    // Append to trigger rotation (before appending, check if 51+51 > 100, so rotate)
+    await logService.appendLog(logFile, 'B'.repeat(50) + '\n');
+
+    // Should have rotated: .1 has old content, main file has new content
+    expect(fs.existsSync(logFile + '.1')).toBe(true);
+    expect(fs.readFileSync(logFile + '.1', 'utf-8')).toBe('A'.repeat(50) + '\n'); // Old content
+    expect(fs.readFileSync(logFile, 'utf-8')).toBe('B'.repeat(50) + '\n'); // New content
+  });
 });

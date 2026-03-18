@@ -17,7 +17,36 @@ export class LogService {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
+
+    // Check if rotation needed (before appending)
+    if (fs.existsSync(logFile)) {
+      const stats = await fs.promises.stat(logFile);
+      if (stats.size + Buffer.byteLength(content, 'utf-8') > this.maxFileSize) {
+        await this.rotateLog(logFile);
+      }
+    }
+
     await fs.promises.appendFile(logFile, content, 'utf-8');
+  }
+
+  private async rotateLog(logFile: string): Promise<void> {
+    // Delete oldest rotated file if exists
+    const oldestFile = `${logFile}.${this.maxRotatedFiles}`;
+    if (fs.existsSync(oldestFile)) {
+      await fs.promises.unlink(oldestFile);
+    }
+
+    // Shift remaining rotated files
+    for (let i = this.maxRotatedFiles - 1; i >= 1; i--) {
+      const currentFile = `${logFile}.${i}`;
+      const nextFile = `${logFile}.${i + 1}`;
+      if (fs.existsSync(currentFile)) {
+        await fs.promises.rename(currentFile, nextFile);
+      }
+    }
+
+    // Rename current to .1
+    await fs.promises.rename(logFile, `${logFile}.1`);
   }
 
   async readLog(logFile: string, lines?: number): Promise<string> {
