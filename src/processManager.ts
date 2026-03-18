@@ -45,6 +45,11 @@ export class ProcessManager {
       status: 'running',
     });
 
+    // Auto-cleanup when process exits naturally
+    childProcess.on('exit', () => {
+      this.processes.delete(input.id);
+    });
+
     return { id: input.id, status: 'started' };
   }
 

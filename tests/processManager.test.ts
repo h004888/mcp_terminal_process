@@ -75,4 +75,20 @@ describe('ProcessManager', () => {
       processManager.stopProcess({ id: 'nonexistent' })
     ).rejects.toThrow("Process 'nonexistent' not found");
   });
+
+  test('processes that exit naturally are removed from tracking', async () => {
+    const processManager = new ProcessManager(testLogsDir);
+
+    // Start a short-lived process that exits quickly
+    await processManager.startProcess({
+      id: 'quick',
+      command: 'echo done',
+    });
+
+    // Wait for natural exit
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Process should be auto-cleaned
+    expect(processManager.getProcess('quick')).toBeUndefined();
+  });
 });
