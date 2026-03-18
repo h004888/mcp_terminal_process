@@ -112,6 +112,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 async function main() {
   const transport = new StdioServerTransport();
+
+  // Graceful shutdown - kill all processes when server exits
+  async function gracefulShutdown() {
+    console.error('Shutting down MCP Terminal server...');
+
+    const processes = Array.from(processManager['processes'].keys());
+    for (const id of processes) {
+      try {
+        await processManager.stopProcess({ id });
+        console.error(`Stopped process: ${id}`);
+      } catch (error) {
+        console.error(`Failed to stop process ${id}:`, error);
+      }
+    }
+
+    process.exit(0);
+  }
+
+  process.on('SIGINT', gracefulShutdown);
+  process.on('SIGTERM', gracefulShutdown);
+
   await server.connect(transport);
   console.error('MCP Terminal server started');
 }
