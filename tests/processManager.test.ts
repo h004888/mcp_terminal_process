@@ -52,4 +52,27 @@ describe('ProcessManager', () => {
       processManager.startProcess({ id: 'test', command: '' })
     ).rejects.toThrow('Command is required');
   });
+
+  test('stopProcess kills the process and returns stopped status', async () => {
+    const processManager = new ProcessManager(testLogsDir);
+
+    // Start a long-running process
+    await processManager.startProcess({
+      id: 'sleep',
+      command: 'sleep 60',
+    });
+
+    const result = await processManager.stopProcess({ id: 'sleep' });
+
+    expect(result).toEqual({ id: 'sleep', status: 'stopped' });
+    expect(processManager.getProcess('sleep')).toBeUndefined();
+  });
+
+  test('stopProcess throws error for non-existent process', async () => {
+    const processManager = new ProcessManager(testLogsDir);
+
+    await expect(
+      processManager.stopProcess({ id: 'nonexistent' })
+    ).rejects.toThrow("Process 'nonexistent' not found");
+  });
 });

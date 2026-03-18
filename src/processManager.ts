@@ -51,4 +51,30 @@ export class ProcessManager {
   getProcess(id: string): ProcessInfo | undefined {
     return this.processes.get(id);
   }
+
+  async stopProcess(input: { id: string }): Promise<{ id: string; status: 'stopped' }> {
+    const processInfo = this.processes.get(input.id);
+
+    if (!processInfo) {
+      throw new Error(`Process '${input.id}' not found`);
+    }
+
+    return new Promise((resolve) => {
+      const proc = processInfo.process;
+
+      proc.once('exit', () => {
+        this.processes.delete(input.id);
+        resolve({ id: input.id, status: 'stopped' });
+      });
+
+      proc.kill('SIGTERM');
+
+      // Force kill after timeout
+      setTimeout(() => {
+        if (this.processes.has(input.id)) {
+          proc.kill('SIGKILL');
+        }
+      }, config.killTimeout);
+    });
+  }
 }
