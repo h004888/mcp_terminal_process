@@ -122,4 +122,22 @@ export class ProcessManager {
 
     return { id: input.id, matches };
   }
+
+  async listProcesses(): Promise<{ processes: { id: string; status: "running"; command: string; logFile: string }[] }> {
+    const processes: { id: string; status: "running"; command: string; logFile: string }[] = [];
+
+    for (const [id, processInfo] of this.processes) {
+      // Get command from spawn arguments (stored in process.spawnargs)
+      const command = processInfo.process.spawnargs?.join(' ') || '';
+
+      processes.push({
+        id,
+        status: 'running',
+        command,
+        logFile: processInfo.logFile,
+      });
+    }
+
+    return { processes };
+  }
 }

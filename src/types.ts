@@ -41,6 +41,15 @@ export interface SearchLogsOutput {
 
 import { ChildProcess } from "node:child_process";
 
+export interface ListProcessesOutput {
+  processes: {
+    id: string;
+    status: "running";
+    command: string;
+    logFile: string;
+  }[];
+}
+
 export interface ProcessInfo {
   id: string;
   process: ChildProcess;

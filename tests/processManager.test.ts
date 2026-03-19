@@ -187,4 +187,33 @@ describe('ProcessManager', () => {
       processManager.searchLogs({ id: 'echo-test', keyword: '[unclosed', regex: true })
     ).rejects.toThrow('Invalid regex');
   });
+
+test('listProcesses returns all running processes', async () => {
+  const processManager = new ProcessManager(testLogsDir);
+
+  // Start two processes
+  await processManager.startProcess({
+    id: 'proc1',
+    command: 'echo test1',
+  });
+
+  await processManager.startProcess({
+    id: 'proc2',
+    command: 'echo test2',
+  });
+
+  const result = await processManager.listProcesses();
+
+  expect(result.processes).toHaveLength(2);
+  expect(result.processes.some(p => p.id === 'proc1')).toBe(true);
+  expect(result.processes.some(p => p.id === 'proc2')).toBe(true);
+});
+
+test('listProcesses returns empty array when no processes', async () => {
+  const processManager = new ProcessManager(testLogsDir);
+
+  const result = await processManager.listProcesses();
+
+  expect(result.processes).toEqual([]);
+});
 });
