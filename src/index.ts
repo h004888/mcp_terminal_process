@@ -74,6 +74,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ['id', 'keyword'],
         },
       },
+      {
+        name: 'list_processes',
+        description: 'List all running processes managed by this MCP server',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
     ],
   };
 });
@@ -97,6 +105,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       case 'search_logs': {
         const result = await processManager.searchLogs(args as any);
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      }
+      case 'list_processes': {
+        const result = await processManager.listProcesses();
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       }
       default:
