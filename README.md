@@ -52,6 +52,55 @@ Add to your Claude Code `settings.json`:
 
 After configuration, restart Claude Code to load the MCP server.
 
+## OpenCode Configuration
+
+Add to your OpenCode `config.json`:
+
+**Default location:** `~/.config/opencode/config.json`
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "mcp-terminal": {
+      "type": "local",
+      "command": ["node", "/path/to/mcp-terminal/dist/index.js"],
+      "environment": {},
+      "timeout": 5000
+    }
+  }
+}
+```
+
+**Example with full path (Windows):**
+```json
+{
+  "mcp": {
+    "mcp-terminal": {
+      "type": "local",
+      "command": ["node", "C:/Users/ADMIN/Downloads/mcp-terminal/dist/index.js"],
+      "environment": {},
+      "timeout": 5000
+    }
+  }
+}
+```
+
+**Example using npx (if published to npm):**
+```json
+{
+  "mcp": {
+    "mcp-terminal": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-terminal"],
+      "timeout": 5000
+    }
+  }
+}
+```
+
+After configuration, restart OpenCode to load the MCP server.
+
 ## Tools
 
 ### start_process
