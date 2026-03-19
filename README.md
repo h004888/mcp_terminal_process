@@ -2,6 +2,81 @@
 
 MCP server for managing long-running processes and logs. Enables AI agents (Claude Code) to start, stop, and monitor processes with real-time log capture.
 
+---
+
+## Tiếng Việt
+
+### Tính năng
+
+- **Khởi động/Dừng Process** - Chạy các process dài và tắt chúng một cách an toàn
+- **Ghi Log thời gian thực** - Tất cả stdout/stderr được tự động ghi vào file log
+- **Tìm kiếm Log** - Tìm log theo từ khóa hoặc regex
+- **Quản lý Process** - Liệt kê các process đang chạy
+- **Log Rotation** - Tự động xoay log khi đạt 10MB để tránh đầy ổ đĩa
+- **Tắt an toàn** - Tất cả process được dọn dẹp khi server dừng
+
+### Cài đặt
+
+#### Yêu cầu
+
+- Node.js >= 18
+- npm
+
+#### Các bước
+
+```bash
+# Clone repository
+git clone https://github.com/h004888/mcp_terminal_process.git
+cd mcp-terminal
+
+# Cài đặt dependencies
+npm install
+
+# Build
+npm run build
+```
+
+### Cấu hình Claude Code
+
+Thêm vào file `settings.json` của Claude Code:
+
+**Windows:** `%USERPROFILE%\.claude\settings.json`
+**macOS/Linux:** `~/.claude/settings.json`
+
+```json
+{
+  "mcpServers": {
+    "mcp-terminal": {
+      "command": "node",
+      "args": ["C:/đường-dẫn/đến/mcp-terminal/dist/index.js"]
+    }
+  }
+}
+```
+
+### Cấu hình OpenCode
+
+Thêm vào file `config.json` của OpenCode:
+
+**Đường dẫn mặc định:** `~/.config/opencode/config.json`
+
+```json
+{
+  "mcp": {
+    "mcp-terminal": {
+      "type": "local",
+      "command": ["node", "/đường-dẫn/đến/mcp-terminal/dist/index.js"],
+      "environment": {},
+      "timeout": 5000
+    }
+  }
+}
+```
+
+---
+
+## English
+
 ## Features
 
 - **Start/Stop Processes** - Launch long-running processes and terminate them gracefully
@@ -36,8 +111,8 @@ npm run build
 
 Add to your Claude Code `settings.json`:
 
-**Windows:** `%USERPROFILE%\.claude\settings.json`
-**macOS/Linux:** `~/.claude/settings.json`
+**Windows:** `%USERPROFILE%\.claude.json`
+**macOS/Linux:** `~/.claude.json`
 
 ```json
 {
@@ -54,9 +129,9 @@ After configuration, restart Claude Code to load the MCP server.
 
 ## OpenCode Configuration
 
-Add to your OpenCode `config.json`:
+Add to your OpenCode `opencode.json`:
 
-**Default location:** `~/.config/opencode/config.json`
+**Default location:** `~/.config/opencode/opencode.json`
 
 ```json
 {
@@ -66,7 +141,8 @@ Add to your OpenCode `config.json`:
       "type": "local",
       "command": ["node", "/path/to/mcp-terminal/dist/index.js"],
       "environment": {},
-      "timeout": 5000
+      "timeout": 5000,
+      "enabled": true
     }
   }
 }
@@ -80,7 +156,8 @@ Add to your OpenCode `config.json`:
       "type": "local",
       "command": ["node", "C:/Users/ADMIN/Downloads/mcp-terminal/dist/index.js"],
       "environment": {},
-      "timeout": 5000
+      "timeout": 5000,
+       "enabled": true
     }
   }
 }
@@ -93,7 +170,8 @@ Add to your OpenCode `config.json`:
     "mcp-terminal": {
       "type": "local",
       "command": ["npx", "-y", "mcp-terminal"],
-      "timeout": 5000
+      "timeout": 5000,
+       "enabled": true
     }
   }
 }
