@@ -38,10 +38,10 @@ npm run build
 
 ### Cấu hình Claude Code
 
-Thêm vào file `settings.json` của Claude Code:
+Thêm vào file `.claude.json` của Claude Code:
 
-**Windows:** `%USERPROFILE%\.claude\settings.json`
-**macOS/Linux:** `~/.claude/settings.json`
+**Windows:** `%USERPROFILE%\.claude.json`
+**macOS/Linux:** `~/.claude.json`
 
 ```json
 {
@@ -56,9 +56,9 @@ Thêm vào file `settings.json` của Claude Code:
 
 ### Cấu hình OpenCode
 
-Thêm vào file `config.json` của OpenCode:
+Thêm vào file `opencode.json` của OpenCode:
 
-**Đường dẫn mặc định:** `~/.config/opencode/config.json`
+**Đường dẫn mặc định:** `~/.config/opencode/opencode.json`
 
 ```json
 {
@@ -109,7 +109,7 @@ npm run build
 
 ## Claude Code Configuration
 
-Add to your Claude Code `settings.json`:
+Add to your Claude Code `.claude.json`:
 
 **Windows:** `%USERPROFILE%\.claude.json`
 **macOS/Linux:** `~/.claude.json`
