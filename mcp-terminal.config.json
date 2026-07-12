@@ -1,0 +1,17 @@
+{
+  "allowedCommands": [
+    "node", "npm", "npx", "pnpm", "yarn", "bun",
+    "python", "python3", "pip",
+    "git", "docker", "docker-compose",
+    "bash", "sh", "zsh",
+    "curl", "wget",
+    "ls", "cat", "echo", "grep", "find", "ps", "top"
+  ],
+  "logRetentionDays": 7,
+  "maxLogSize": 52428800,
+  "autoRestart": true,
+  "maxRestarts": 5,
+  "restartDelayMs": 2000,
+  "healthCheckIntervalMs": 30000,
+  "killTimeoutMs": 5000
+}

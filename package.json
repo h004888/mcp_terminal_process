@@ -1,18 +1,26 @@
 {
   "name": "mcp-terminal",
   "version": "1.0.0",
-  "description": "MCP server for managing long-running processes and logs",
+  "description": "MCP server for managing long-running processes and logs. Enables AI agents to start, stop, and monitor processes with real-time log capture.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
     "mcp-terminal": "./dist/index.js"
   },
+  "files": [
+    "dist/",
+    "README.md",
+    "CONFIGURATION.md",
+    "mcp-terminal.config.json"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "prepack": "npm run build"
+    "test:e2e": "npx tsx tests/end-to-end.ts",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"
@@ -27,5 +35,14 @@
   },
   "engines": {
     "node": ">=18"
-  }
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "process-manager",
+    "terminal",
+    "claude-code"
+  ],
+  "license": "MIT"
 }

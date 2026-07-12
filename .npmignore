@@ -1,0 +1,19 @@
+# Source
+src/
+tsconfig.json
+
+# Tests
+tests/
+jest.config.js
+
+# Docs & plans
+docs/
+
+# Release archive
+release/
+*.zip
+
+# Dev configs
+.mcp.json
+.impeccable/
+.gitignore

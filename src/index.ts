@@ -5,7 +5,9 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { ProcessManager } from './processManager.js';
+import { Validator } from './validator.js';
 import { config } from './config.js';
+import { startHttpServer } from './httpServer.js';
 
 const server = new Server(
   {
@@ -20,6 +22,10 @@ const server = new Server(
 );
 
 const processManager = new ProcessManager(config.logsDir);
+const validator = new Validator();
+
+// Start health checker
+processManager.startHealthChecker();
 
 // Register tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -27,13 +33,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: 'start_process',
-        description: 'Start a long-running process and capture its output to a log file',
+        description: 'Start a long-running process using execFile (secure, no shell). Provide command and args array. For shell pipelines, use run_script instead.',
         inputSchema: {
           type: 'object',
           properties: {
-            id: { type: 'string', description: 'Unique process identifier' },
-            command: { type: 'string', description: 'Command to execute' },
+            id: { type: 'string', pattern: '^[a-zA-Z0-9_-]+$', description: 'Unique process identifier' },
+            command: { type: 'string', description: 'Command to execute (e.g., "node")' },
+            args: { type: 'array', items: { type: 'string' }, description: 'Command arguments (e.g., ["server.js"])' },
             cwd: { type: 'string', description: 'Working directory (optional)' },
+            group: { type: 'string', pattern: '^[a-zA-Z0-9_-]+$', description: 'Process group for batch operations (optional)' },
+            autoRestart: { type: 'boolean', description: 'Auto-restart on crash (default: true)' },
+            maxRestarts: { type: 'number', description: 'Maximum number of restarts (default: 5)' },
+            env: { type: 'object', description: 'Environment variables (optional)' },
           },
           required: ['id', 'command'],
         },
@@ -79,7 +90,81 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         description: 'List all running processes managed by this MCP server',
         inputSchema: {
           type: 'object',
-          properties: {},
+          properties: {
+            group: { type: 'string', description: 'Filter by process group (optional)' },
+          },
+        },
+      },
+      {
+        name: 'run_script',
+        description: 'Execute a shell pipeline script (e.g., "npm run build && echo done"). Uses shell mode — less secure than start_process. Only use when shell features (pipes, &&, ||) are required.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', pattern: '^[a-zA-Z0-9_-]+$', description: 'Unique process identifier' },
+            command: { type: 'string', description: 'Shell script to execute (full string, supports pipes, &&, etc.)' },
+            cwd: { type: 'string', description: 'Working directory (optional)' },
+          },
+          required: ['id', 'command'],
+        },
+      },
+      {
+        name: 'get_process_status',
+        description: 'Get detailed status of a process including CPU, memory, uptime, and restart count',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Process identifier' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'restart_process',
+        description: 'Stop and restart a running process with the same parameters',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Process identifier to restart' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'stop_process_group',
+        description: 'Stop all processes in a group',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            group: { type: 'string', description: 'Group name to stop' },
+          },
+          required: ['group'],
+        },
+      },
+      {
+        name: 'batch_start',
+        description: 'Start multiple processes from a JSON array of commands',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            commands: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  command: { type: 'string' },
+                  args: { type: 'array', items: { type: 'string' } },
+                  cwd: { type: 'string' },
+                  group: { type: 'string' },
+                  autoRestart: { type: 'boolean' },
+                },
+                required: ['id', 'command'],
+              },
+              description: 'Array of commands to start',
+            },
+          },
+          required: ['commands'],
         },
       },
     ],
@@ -92,7 +177,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case 'start_process': {
-        const result = await processManager.startProcess(args as any);
+        const validated = validator.validateInput(args as Record<string, unknown>);
+        const result = await processManager.startProcess(validated);
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       }
       case 'stop_process': {
@@ -108,7 +194,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       }
       case 'list_processes': {
-        const result = await processManager.listProcesses();
+        const result = await processManager.listProcesses(args as { group?: string });
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      }
+      case 'run_script': {
+        const validated = validator.validateShellInput(args as Record<string, unknown>);
+        const result = await processManager.startProcessShell(validated);
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      }
+      case 'get_process_status': {
+        const { id } = args as { id: string };
+        const result = await processManager.getProcessStatus(id);
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      }
+      case 'restart_process': {
+        const { id } = args as { id: string };
+        const result = await processManager.restartProcess(id);
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      }
+      case 'stop_process_group': {
+        const { group } = args as { group: string };
+        const result = await processManager.stopProcessGroup(group);
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      }
+      case 'batch_start': {
+        const { commands } = args as { commands: any[] };
+        const result = await processManager.batchStart(commands);
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       }
       default:
@@ -129,7 +240,7 @@ async function main() {
   async function gracefulShutdown() {
     console.error('Shutting down MCP Terminal server...');
 
-    const processes = Array.from(processManager['processes'].keys());
+    const processes = processManager.getAllProcessIds();
     for (const id of processes) {
       try {
         await processManager.stopProcess({ id });
@@ -147,6 +258,9 @@ async function main() {
 
   await server.connect(transport);
   console.error('MCP Terminal server started');
+
+  // Start optional HTTP server (enable with HTTP_PORT env var)
+  startHttpServer(processManager);
 }
 
 main().catch(console.error);

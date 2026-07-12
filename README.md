@@ -183,109 +183,175 @@ After configuration, restart OpenCode to load the MCP server.
 
 ### start_process
 
-Start a long-running process.
+Start a long-running process using execFile (secure, no shell).
 
 ```json
 {
   "id": "backend",
-  "command": "npm run dev",
-  "cwd": "C:/path/to/project"
+  "command": "node",
+  "args": ["server.js"],
+  "cwd": "C:/path/to/project",
+  "group": "services",
+  "autoRestart": true,
+  "maxRestarts": 3,
+  "env": { "NODE_ENV": "production" }
 }
 ```
 
 **Parameters:**
-- `id` (required) - Unique process identifier
-- `command` (required) - Command to execute
+- `id` (required) - Unique process identifier (a-zA-Z0-9_-)
+- `command` (required) - Command to execute (must be in allowlist)
+- `args` (optional) - Command arguments as array
 - `cwd` (optional) - Working directory
-
----
+- `group` (optional) - Process group for batch operations
+- `autoRestart` (optional) - Auto-restart on crash (default: true)
+- `maxRestarts` (optional) - Maximum restarts (default: 5)
+- `env` (optional) - Environment variables
 
 ### stop_process
 
-Stop a running process.
+Stop a running process. Uses `taskkill` on Windows, `SIGTERM→SIGKILL` on Unix.
 
 ```json
-{
-  "id": "backend"
-}
+{ "id": "backend" }
 ```
 
----
+### restart_process
+
+Stop and restart a running process with the same parameters.
+
+```json
+{ "id": "backend" }
+```
 
 ### get_logs
 
-Retrieve logs from a process.
+Retrieve logs from a process (streaming tail, memory-safe).
 
 ```json
-{
-  "id": "backend",
-  "lines": 100
-}
+{ "id": "backend", "lines": 100 }
 ```
 
 **Parameters:**
 - `id` (required) - Process identifier
 - `lines` (optional) - Return last N lines only
 
----
-
 ### search_logs
 
-Search logs for a keyword or regex.
+Search logs for a keyword or regex (streaming search, safe for large files).
 
 ```json
-{
-  "id": "backend",
-  "keyword": "ERROR",
-  "regex": false
-}
+{ "id": "backend", "keyword": "ERROR", "regex": false }
 ```
-
-**Parameters:**
-- `id` (required) - Process identifier
-- `keyword` (required) - Search term
-- `regex` (optional) - Use regex search (default: false)
-
----
 
 ### list_processes
 
-List all running processes.
+List all running processes, with optional group filter.
 
 ```json
-{}
+{ "group": "backend" }
 ```
 
-Returns all currently running processes with their IDs, status, command, and log file paths.
+### get_process_status
+
+Get detailed status including CPU, memory, uptime, restart count.
+
+```json
+{ "id": "backend" }
+```
+
+**Returns:**
+```json
+{
+  "id": "backend",
+  "status": "running",
+  "cpu": "2.3",
+  "memory": "45MB",
+  "uptime": "2h 13m",
+  "restarts": 0,
+  "group": "services",
+  "command": "node server.js",
+  "logFile": "logs/backend/2026-07-12T10-00-00.log",
+  "startedAt": "2026-07-12T10:00:00.000Z"
+}
+```
+
+### run_script
+
+Execute a shell pipeline script. Uses shell mode — only use when shell features are needed.
+
+```json
+{ "id": "build", "command": "npm run build && echo done", "cwd": "C:/project" }
+```
+
+### stop_process_group
+
+Stop all processes in a group.
+
+```json
+{ "group": "backend" }
+```
+
+### batch_start
+
+Start multiple processes from a JSON array.
+
+```json
+{
+  "commands": [
+    { "id": "api", "command": "node", "args": ["api.js"], "group": "backend" },
+    { "id": "web", "command": "node", "args": ["web.js"], "group": "frontend" }
+  ]
+}
+```
+
+## Configuration
+
+See [CONFIGURATION.md](CONFIGURATION.md) for all config options including command allowlist, log retention, and auto-restart settings.
 
 ## Usage Examples
 
-### Start a backend server
-
+### Start a backend server with auto-restart
 ```
-/mcp start_process {"id": "backend", "command": "npm run dev", "cwd": "C:/my-project"}
+/mcp start_process {"id": "backend", "command": "node", "args": ["server.js"], "group": "services", "cwd": "C:/my-project"}
+```
+
+### Monitor a process
+```
+/mcp get_process_status {"id": "backend"}
 ```
 
 ### Check logs
-
 ```
-/mcp get_logs {"id": "backend"}
+/mcp get_logs {"id": "backend", "lines": 50}
 ```
 
 ### Search for errors
-
 ```
 /mcp search_logs {"id": "backend", "keyword": "Exception"}
 ```
 
-### List all processes
+### Restart a process
+```
+/mcp restart_process {"id": "backend"}
+```
 
+### Start a full stack
+```
+/mcp batch_start {"commands": [{"id":"db","command":"docker","args":["compose","up"],"group":"backend"},{"id":"api","command":"node","args":["server.js"],"group":"backend"}]}
+```
+
+### Stop all processes in a group
+```
+/mcp stop_process_group {"group": "backend"}
+```
+
+### List all running processes
 ```
 /mcp list_processes {}
 ```
 
 ### Stop a process
-
 ```
 /mcp stop_process {"id": "backend"}
 ```
@@ -293,22 +359,39 @@ Returns all currently running processes with their IDs, status, command, and log
 ## Architecture
 
 ```
-User (Claude Code) → MCP Protocol → MCP Server → Process Manager → logs/*.log
-```
+User (Claude Code) → MCP Protocol → MCP Terminal Server
+                                       │
+                          ┌────────────┴────────────┐
+                          │ Process Manager          │
+                          │  ├─ execFile (secure)    │
+                          │  ├─ process groups       │
+                          │  ├─ auto-restart         │
+                          │  ├─ health checker       │
+                          │  └─ platform kill        │
+                          │    (taskkill / SIGTERM)  │
+                          │                          │
+                          │ Log Service               │
+                          │  ├─ session-based logs   │
+                          │  ├─ streaming tail read  │
+                          │  ├─ 7-day retention      │
+                          │  └─ 50MB rotation        │
+                          └──────────────────────────┘
 
-**Components:**
-- **MCP Server** - Handles MCP protocol and exposes tools
-- **Process Manager** - Spawns, tracks, and kills child processes
-- **Log Service** - File-based log storage with 10MB rotation
+Logs: logs/{processId}/{sessionId}.log
+Config: mcp-terminal.config.json
+```
 
 ## Log Files
 
-Logs are stored in the `logs/` directory:
-- `logs/{id}.log` - Current active log
-- `logs/{id}.1.log` - Rotated log (oldest)
-- etc.
+Logs are stored in `logs/` directory with session-based organization:
+- `logs/{processId}/{timestamp}.log` - Current session log
+- `logs/{processId}/{timestamp}.1.log` - Rotated (old) logs
 
-Logs are rotated when they exceed 10MB. Maximum 5 rotated files kept per process.
+Features:
+- **Session-based**: Each restart creates a new log file — no mixing
+- **Streaming reads**: `get_logs` uses binary tail, safe for multi-GB files
+- **Auto-cleanup**: Logs older than 7 days are deleted automatically
+- **Rotation**: Files >50MB are rotated (configurable)
 
 ## License
 

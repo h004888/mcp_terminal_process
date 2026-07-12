@@ -1,0 +1,65 @@
+😎 MCP Terminal - Khi AI Agent của bạn học được cách "nghịch" terminal
+
+---
+
+Chào các dev!
+
+Mình có một câu hỏi:
+
+🤔 AI Agent của bạn có đang... ngồi chơi xơi nước?
+
+Bạn bảo nó "chạy cái server đi" → Nó bảo "oke" → Xong! Không output, không log, không biết đang chạy hay đã chết! 😅
+
+Giới thiệu 👇
+
+🎉 MCP Terminal - Để AI Agent của bạn có thể:
+
+✅ Nói chuyện với terminal - Chạy server, kill process, log tất tần tật
+✅ Xem log như người - Realtime, có search, có filter
+✅ Không sợ đầy ổ đĩa - Log tự xoay vòng, 10MB thôi
+✅ Không kill nhầm process - Mỗi cái có ID riêng nè
+
+---
+
+🎯 AI Agent lúc này:
+
+Anh AI: "Em chạy server backend rồi đó!"
+User: "Ờ, chạy được chưa?"
+Anh AI: "Dạ... em không biết 😅"
+
+Sau khi cài MCP Terminal:
+
+Anh AI: "Em chạy server backend rồi, log đầy đủ, process ID là 'backend', user muốn xem không?"
+User: "..." 👀
+
+---
+
+⚡ Setup siêu nhanh:
+
+git clone https://github.com/h004888/mcp_terminal_process.git
+npm install && npm run build
+# Thêm vào Claude Code config - xong!
+
+---
+
+🛠️ Các tools AI Agent dùng được:
+
+| Tool | Ai làm gì |
+|------|-----------|
+| start_process | Bật server |
+| stop_process | Tắt server (an toàn) |
+| get_logs | Xem log |
+| search_logs | Tìm lỗi |
+| list_processes | "Em đang chạy mấy cái này nè!" |
+
+---
+
+🤗 Hỗ trợ cả Claude Code lẫn OpenCode nha!
+
+---
+
+Link: https://github.com/h004888/mcp_terminal_process
+
+Để lại ⭐ nếu thấy hữu ích!
+
+#MCP #AIAgent #ClaudeCode #OpenCode #DevTools #Productivity #CodingLife
